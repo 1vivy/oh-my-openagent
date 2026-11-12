@@ -2,6 +2,7 @@ import type { CreateAgentSessionOptions } from "@code-yeongyu/senpi"
 
 import type { ChildHandle as InProcessChildHandle } from "../runners/in-process/child-handle"
 import { RunnerError, type ChildSpec } from "../runners/in-process"
+import type { PrewalkTarget } from "../runners/in-process/prewalk"
 import { resolveChildSessionDir } from "../runners/rpc/spawn"
 import { modelSelector } from "../runners/in-process/runtime-fallback-settings"
 import { dirname } from "node:path"
@@ -19,6 +20,8 @@ export type InProcessSessionContext = {
   readonly modelRuntime?: ChildSpec["modelRuntime"]
   readonly model?: CreateAgentSessionOptions["model"]
   readonly thinkingLevel?: CreateAgentSessionOptions["thinkingLevel"]
+  // The model an armed child continues on after its first edit; absent leaves it on `model`.
+  readonly prewalkTarget?: PrewalkTarget
 }
 
 export type ResumeSessionContextResult =
@@ -123,6 +126,7 @@ function toChildSpec(spec: ManagedStartSpec, context: InProcessSessionContext): 
     ...(context.modelRuntime !== undefined ? { modelRuntime: context.modelRuntime } : {}),
     ...(context.model !== undefined ? { model: context.model } : {}),
     ...(context.thinkingLevel !== undefined ? { thinkingLevel: context.thinkingLevel } : {}),
+    ...(context.prewalkTarget !== undefined ? { prewalkTarget: context.prewalkTarget } : {}),
     ...(spec.model !== undefined ? { selectedModel: spec.model } : {}),
     ...(spec.requestedModel !== undefined ? { requestedModel: spec.requestedModel } : {}),
     ...(spec.fallbackModels !== undefined ? { fallbackModels: spec.fallbackModels } : {}),

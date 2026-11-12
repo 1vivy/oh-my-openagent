@@ -81,6 +81,7 @@ export function createParentRegistrySessionContext(
       }
       const modelRuntime = registry.modelRuntime
       const thinkingLevel = asSenpiThinkingLevel(spec.variant) ?? asSenpiThinkingLevel(splitModelDecorators(spec.model).thinkingLevel)
+      const prewalkTarget = resolvePrewalkTarget(registry, spec, model, thinkingLevel, resolveExcludeModels())
       return {
         ...trust(),
         modelRegistry: registry,
@@ -88,6 +89,7 @@ export function createParentRegistrySessionContext(
         ...(modelRuntime !== undefined && { modelRuntime }),
         model,
         ...(thinkingLevel !== undefined && { thinkingLevel }),
+        ...(prewalkTarget !== undefined && { prewalkTarget }),
       }
     }
     const modelRuntime = registry.modelRuntime
@@ -106,6 +108,26 @@ export function createParentRegistrySessionContext(
       return resolved.ok ? { ok: true, context: { ...trust(), ...resolved.context } } : resolved
     },
   })
+}
+
+// A handoff target is an optimization, so every miss leaves the child on its own model: an
+// excluded or unknown target, or one that names the model and level the child already starts on.
+function resolvePrewalkTarget(
+  registry: ChildModelRegistry,
+  spec: ManagedStartSpec,
+  startModel: NonNullable<InProcessSessionContext["model"]>,
+  startThinkingLevel: InProcessSessionContext["thinkingLevel"],
+  excludeModels: readonly string[] | undefined,
+): InProcessSessionContext["prewalkTarget"] {
+  if (spec.prewalk === undefined) return undefined
+  const { base, thinkingLevel: suffix } = splitModelDecorators(spec.prewalk.trim())
+  if (excludedModelPattern(base, excludeModels) !== undefined) return undefined
+  const model = findModelReference(registry, base)
+  if (model === undefined) return undefined
+  const thinkingLevel = asSenpiThinkingLevel(suffix)
+  const sameModel = model.provider === startModel.provider && model.id === startModel.id
+  if (sameModel && (thinkingLevel === undefined || thinkingLevel === startThinkingLevel)) return undefined
+  return { model, ...(thinkingLevel !== undefined && { thinkingLevel }) }
 }
 
 /**

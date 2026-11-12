@@ -132,6 +132,7 @@ export function buildManagedSpec(input: {
       : {}),
     ...(plan.resolved_model !== undefined ? { resolvedModel: plan.resolved_model } : {}),
     ...(plan.variant !== undefined ? { variant: plan.variant } : {}),
+    ...(plan.prewalk !== undefined ? { prewalk: plan.prewalk } : {}),
     ...(record.agent_type !== undefined ? { agentType: record.agent_type } : {}),
     ...(instructions !== undefined ? { instructions } : {}),
     ...(plan.toolAllowlist !== undefined ? { toolAllowlist: plan.toolAllowlist } : {}),

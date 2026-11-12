@@ -1247,6 +1247,15 @@
             }
           },
           "additionalProperties": false
+        },
+        "prewalk": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
@@ -3896,6 +3905,15 @@
                 }
               },
               "additionalProperties": false
+            },
+            "prewalk": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
@@ -6369,6 +6387,15 @@
                 }
               },
               "additionalProperties": false
+            },
+            "prewalk": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
@@ -8842,6 +8869,15 @@
                 }
               },
               "additionalProperties": false
+            },
+            "prewalk": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
@@ -11321,6 +11357,15 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "prewalk": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
               }
             },
             "additionalProperties": false
@@ -13794,6 +13839,15 @@
                       }
                     },
                     "additionalProperties": false
+                  },
+                  "prewalk": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -16267,6 +16321,15 @@
                       }
                     },
                     "additionalProperties": false
+                  },
+                  "prewalk": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -18740,6 +18803,15 @@
                       }
                     },
                     "additionalProperties": false
+                  },
+                  "prewalk": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
                 },
                 "additionalProperties": false

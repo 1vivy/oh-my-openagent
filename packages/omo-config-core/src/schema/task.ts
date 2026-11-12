@@ -105,6 +105,9 @@ export const OmoTaskSettingsSchema = z.object({
     max_wall_clock_minutes: 120,
   }),
   dag: OmoTaskDagSettingsSchema.optional(),
+  // Category name -> `provider/model[:thinking]`. An in-process child of that category starts on the
+  // category's own model and continues on this one, in the same session, after its first edit.
+  prewalk: z.record(z.string(), z.string()).optional(),
 }).strict()
 
 export const OmoTaskDagSettingsLayerSchema = z.object({
@@ -156,6 +159,7 @@ export const OmoTaskSettingsLayerSchema = z.object({
   wait: OmoTaskWaitLayerSchema.optional(),
   team: OmoTaskTeamSettingsLayerSchema.optional(),
   dag: OmoTaskDagSettingsLayerSchema.optional(),
+  prewalk: z.record(z.string(), z.string()).optional(),
 }).strict()
 
 export type OmoTaskDagSettings = z.infer<typeof OmoTaskDagSettingsSchema>

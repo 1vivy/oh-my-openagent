@@ -83,7 +83,7 @@ export function createTaskChildPlanner(
     }
 
     const resolution = resolveCategory(categoryName, omoConfig, registry, { distributeModels })
-    const plan = toPlanResolution(categoryName, resolution, availableAgents)
+    const plan = toPlanResolution(categoryName, resolution, availableAgents, omoConfig.task?.prewalk)
     // Q's standing model rule: a chain ends in a typed failure that names each model, so the parent
     // reads the whole chain and the fix instead of retrying a dead binding. No substitution happens.
     if (plan.kind === "error" && plan.error.code === "model_unavailable") {
@@ -213,9 +213,14 @@ function toPlanResolution(
   categoryName: string,
   resolution: ReturnType<typeof resolveCategory<SenpiModelPort>>,
   availableAgents: readonly string[],
+  prewalkByCategory: Readonly<Record<string, string>> | undefined,
 ): PlanResolution {
   if (resolution.kind === "resolved") {
     const appliedVariant = resolution.spec.reasoning ?? resolution.spec.reasoningEffort ?? resolution.spec.variant
+    // Keyed by the resolved category, so a retired alias and its replacement share one entry.
+    const prewalk = prewalkByCategory !== undefined && Object.hasOwn(prewalkByCategory, resolution.category)
+      ? prewalkByCategory[resolution.category]
+      : undefined
     return {
       kind: "resolved",
       plan: {
@@ -238,6 +243,7 @@ function toPlanResolution(
         ...(appliedVariant !== undefined ? { variant: appliedVariant } : {}),
         category: resolution.category,
         ...(resolution.spec.prompt_append !== undefined && { promptAppend: resolution.spec.prompt_append }),
+        ...(prewalk !== undefined && { prewalk }),
       },
     }
   }

@@ -594,8 +594,23 @@ OpenGateway has a built-in unlimited provider concurrency default, so it does no
 | `team.max_parallel_members` | int 1..8 | `4` |
 | `team.max_wall_clock_minutes` | positive int | `120` |
 | `dag` | object | unset |
+| `prewalk` | record<string, string> | unset |
 
 `task.dag` is an optional block bounding the DAG orchestration subsystem (`schema/task.ts`): `max_nodes_per_run` (`64`), `max_runs_per_session` (`16`, counting only runs that are still active: finished, failed and cancelled runs free their slot), `subscriber_ring` (`1000`), `heartbeat_ms` (`15000`), `history_default_limit` (`256`), `history_max_limit` (`1000`), `retention_days` (`7`), `max_prompt_bytes` (`262144`).
+
+`task.prewalk` maps a category name to a `provider/model[:thinking]` handoff target. A child of that category starts on the category's own model with a plan-first instruction joined onto its task. At its first `edit`, `write` or `apply_patch` after a successful `todo` call, the same session continues on the target: the second model inherits everything the first one read, the plan as a todo list and one edit in place. A child without a `todo` tool hands off at its first edit. The handoff is one-shot and fails open: a target that is unknown, kept out by `exclude_models` or equal to the starting model and level leaves the child on its own model, as does a refused switch. It applies to in-process children spawned by category only: a call with an explicit `model`, a `subagent_type` call, a resumed child and a `process` child (a daemon session, a team member) are never handed off, so set `default_execution_mode: "in-process"` to use it. After the switch the child has no model fallback chain.
+
+A category fits when its hard reasoning ends before the first edit and the work left is bounded and has many edits: `deep-low`, `unspecified-low`, `unspecified-high`. It does not fit `deep-high`, `ultrabrain` or `architect`, whose reasoning continues while editing, or `quick` and `writing`, which have no planning phase to hand off from.
+
+```jsonc
+{
+  "categories": { "unspecified-low": { "model": "anthropic/claude-opus-5-5" } },
+  "task": {
+    "default_execution_mode": "in-process",
+    "prewalk": { "unspecified-low": "deepseek/deepseek-v4-pro:high" }
+  }
+}
+```
 
 `global_concurrency` caps how many tasks run at once per senpi process, across all model and provider lanes combined. It applies only to the senpi engine; OpenCode `background_task` is unaffected (parity is a follow-up). The cap is per process, not cross-process or machine-wide: two senpi processes each get their own budget. A task spills to a later entry in its fallback chain whenever admission cannot seat it in the preferred model's lane — the per-model/provider/default lane limit is reached or its queue is occupied (the common case), or this global cap is full — even though the preferred model never failed. That later entry can be a DIFFERENT provider, with different pricing and different data handling. If that matters to you, remove cross-provider entries from your fallback chains or use single-model chains. No new storage or telemetry is introduced by this setting.
 

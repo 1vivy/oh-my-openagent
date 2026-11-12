@@ -46,6 +46,8 @@ export type ManagedStartSpec = {
   // matches on this pair - never on the human display string, which need not be a registry id.
   readonly resolvedModel?: ResolvedModelRecord
   readonly variant?: string
+  // `provider/model[:thinking]` the child continues on after its first edit (in-process only).
+  readonly prewalk?: string
   readonly agentType?: string
   readonly instructions?: string
   readonly toolAllowlist?: readonly string[]
@@ -123,6 +125,7 @@ export type ResolvedChildPlan = {
   readonly fallback_models?: readonly ResolvedModelRecord[]
   readonly resolved_model?: ResolvedModelRecord
   readonly variant?: string
+  readonly prewalk?: string
   readonly agentExecutionMode?: ExecutionMode
   readonly agentType?: string
   readonly category?: string

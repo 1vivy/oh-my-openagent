@@ -17,6 +17,7 @@ import {
 import { buildChildSessionOptions, requireChildSessionDir, resolveMemberScopedToolNames } from "./in-process/child-options"
 import { defaultCreateChildSession, type ChildDialogBinding, type CreateChildSession } from "./in-process/create-child-session"
 import { assertPinnedModelHonoured } from "./in-process/pin-check"
+import { armPrewalk, PREWALK_PLAN_NUDGE, type PrewalkTarget } from "./in-process/prewalk"
 import { assertUsableSessionFile } from "./in-process/session-file-guard"
 import { RunnerError } from "./in-process/runner-error"
 import type { ChildRetryOverride } from "./in-process/runtime-fallback-settings"
@@ -73,6 +74,8 @@ export type ChildSpec = {
   readonly modelRuntime?: CreateAgentSessionOptions["modelRuntime"]
   readonly model?: CreateAgentSessionOptions["model"]
   readonly thinkingLevel?: CreateAgentSessionOptions["thinkingLevel"]
+  // Armed at start only: a resumed child stays on the model its transcript restored.
+  readonly prewalkTarget?: PrewalkTarget
   readonly selectedModel?: string
   readonly requestedModel?: ResolvedModelRecord
   readonly fallbackModels?: readonly ResolvedModelRecord[]
@@ -238,7 +241,7 @@ export class InProcessRunner {
         parentSessionId: spec.parentSessionId,
         rootSessionId: spec.rootSessionId,
         depth: spec.depth,
-        prompt: spec.prompt,
+        prompt: spec.prewalkTarget === undefined ? spec.prompt : `${spec.prompt}\n\n${PREWALK_PLAN_NUDGE}`,
         ...(spec.agentType !== undefined && { agentType: spec.agentType }),
         ...(spec.instructions !== undefined && { instructions: spec.instructions }),
       })
@@ -262,6 +265,7 @@ export class InProcessRunner {
     // id for same-host revival. Nothing about it reaches the record, the v1 spawn_spec or the
     // child's JSONL transcript.
     if (spec.kernelTools !== undefined) this.#kernelToolBindings?.bind(spec.taskId, spec.kernelTools)
+    if (spec.prewalkTarget !== undefined) armPrewalk(session, spec.prewalkTarget, spec.taskId)
     return { handle: staged.handle, promptText, begin: staged.begin }
   }
 

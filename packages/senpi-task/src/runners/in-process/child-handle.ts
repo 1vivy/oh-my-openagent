@@ -1,4 +1,4 @@
-import type { AgentSession } from "@code-yeongyu/senpi"
+import type { AgentSession, CreateAgentSessionOptions } from "@code-yeongyu/senpi"
 import { reportedEffectiveModel, type CatalogModelIdentity, type EffectiveModel } from "../pinned-model-equivalence"
 
 import type { TaskInterruptCause } from "../../state/record-types"
@@ -6,6 +6,7 @@ import type { NativeRunPause } from "../../pause/native-child-pause"
 import type { InputIdentity } from "../types"
 import { createInProcessRunPause, type EngineTurnWatch, type RunHoldSession } from "./native-run-pause"
 import type { TaskStartFailureKind, TaskStartFailureReason } from "../../state/start-failure"
+import type { SenpiThinkingLevel } from "../../senpi/thinking-level"
 
 /** How the engine settled a steer/follow-up: delivered to the running turn, or queued behind it. */
 export type QueuedInputDisposition = Awaited<ReturnType<AgentSession["steer"]>>
@@ -16,7 +17,12 @@ const ignoreQueuedInputDisposition = (_disposition: QueuedInputDisposition): voi
 export type ChildSessionEvent = {
   readonly type: string
   readonly message?: unknown
+  readonly toolName?: string
+  readonly isError?: boolean
 }
+
+/** A registry model, as the session's model switch takes it. */
+export type PrewalkModel = NonNullable<CreateAgentSessionOptions["model"]>
 
 export type ChildSessionListener = (event: ChildSessionEvent) => void
 
@@ -41,6 +47,11 @@ export type ChildSession = RunHoldSession & {
   abort(): Promise<void>
   subscribe(listener: ChildSessionListener): () => void
   getLastAssistantText(): string | undefined
+  // The session-scoped switches and the tool list a prewalk handoff uses; fakes may omit them, and
+  // a session without `setSessionModel` is never handed off.
+  setSessionModel?(model: PrewalkModel): Promise<unknown>
+  setSessionThinkingLevel?(level: SenpiThinkingLevel): void
+  getActiveToolNames?(): readonly string[]
   /** Absent on fakes that load no extensions; a live AgentSession always has one. */
   readonly extensionRunner?: ChildExtensionRunner
   dispose(): void
