@@ -120,13 +120,14 @@ export type ManagerStartSpec = {
 }
 
 // A handoff the planner resolved for a category child: the `provider/model[:thinking]` it may
-// continue on after its first edit, and the judge-category model that decides it per assignment.
+// continue on after its first edit, and the classifier model and cut-offs that decide it for
+// each assignment.
 export type PrewalkPlan = {
   readonly into: string
   readonly judge: {
     readonly model: string
-    readonly variant?: string
-    readonly fallback_models?: readonly ResolvedModelRecord[]
+    readonly settles_min: number
+    readonly reopen_max: number
   }
 }
 

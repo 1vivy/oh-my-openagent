@@ -1251,10 +1251,22 @@
         "prewalk": {
           "type": "object",
           "properties": {
-            "judge_category": {
-              "default": "quick",
+            "judge_model": {
+              "default": "typesafe/jev-latest",
               "type": "string",
               "minLength": 1
+            },
+            "settles_min": {
+              "default": 0.55,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "reopen_max": {
+              "default": 0.5,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
             },
             "targets": {
               "default": {},
@@ -3921,9 +3933,19 @@
             "prewalk": {
               "type": "object",
               "properties": {
-                "judge_category": {
+                "judge_model": {
                   "type": "string",
                   "minLength": 1
+                },
+                "settles_min": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "reopen_max": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 },
                 "targets": {
                   "type": "object",
@@ -6413,9 +6435,19 @@
             "prewalk": {
               "type": "object",
               "properties": {
-                "judge_category": {
+                "judge_model": {
                   "type": "string",
                   "minLength": 1
+                },
+                "settles_min": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "reopen_max": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 },
                 "targets": {
                   "type": "object",
@@ -8905,9 +8937,19 @@
             "prewalk": {
               "type": "object",
               "properties": {
-                "judge_category": {
+                "judge_model": {
                   "type": "string",
                   "minLength": 1
+                },
+                "settles_min": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "reopen_max": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 },
                 "targets": {
                   "type": "object",
@@ -11403,9 +11445,19 @@
               "prewalk": {
                 "type": "object",
                 "properties": {
-                  "judge_category": {
+                  "judge_model": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "settles_min": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "reopen_max": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
                   },
                   "targets": {
                     "type": "object",
@@ -13895,9 +13947,19 @@
                   "prewalk": {
                     "type": "object",
                     "properties": {
-                      "judge_category": {
+                      "judge_model": {
                         "type": "string",
                         "minLength": 1
+                      },
+                      "settles_min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "reopen_max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
                       },
                       "targets": {
                         "type": "object",
@@ -16387,9 +16449,19 @@
                   "prewalk": {
                     "type": "object",
                     "properties": {
-                      "judge_category": {
+                      "judge_model": {
                         "type": "string",
                         "minLength": 1
+                      },
+                      "settles_min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "reopen_max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
                       },
                       "targets": {
                         "type": "object",
@@ -18879,9 +18951,19 @@
                   "prewalk": {
                     "type": "object",
                     "properties": {
-                      "judge_category": {
+                      "judge_model": {
                         "type": "string",
                         "minLength": 1
+                      },
+                      "settles_min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "reopen_max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
                       },
                       "targets": {
                         "type": "object",

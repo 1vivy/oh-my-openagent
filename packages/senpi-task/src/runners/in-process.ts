@@ -191,14 +191,11 @@ export class InProcessRunner {
       })
     }
 
-    // The handoff is armed for this assignment only when the judge arms it. The judge is a bare
-    // runner's child, as every judge is: no shared parent tool, kernel grant or dialog.
-    let into: PrewalkHandoff["into"] | undefined
-    if (spec.prewalkHandoff !== undefined) {
-      const judge = new InProcessRunner({ createSession: this.#createSession, depthPolicy: this.#depthPolicy })
-      const verdict = await judgePrewalk((judgeSpec) => judge.start(judgeSpec), spec, spec.prewalkHandoff)
-      if (verdict !== undefined) into = spec.prewalkHandoff.into
-    }
+    // The handoff is armed for this assignment only when the classifier's answers clear the cut-offs.
+    const into = spec.prewalkHandoff !== undefined && spec.modelRegistry !== undefined
+      && await judgePrewalk(spec.modelRegistry, spec.prewalkHandoff, spec.taskId)
+      ? spec.prewalkHandoff.into
+      : undefined
 
     let session: ChildSession
     let createdSession: ChildSession | undefined

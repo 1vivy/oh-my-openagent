@@ -112,7 +112,7 @@ export function createParentRegistrySessionContext(
 
 // A handoff is an optimization, so every miss leaves the child on its own model: an excluded or
 // unknown target, a target that names the model and level the child already starts on, or a judge
-// model the registry no longer serves.
+// that is not a classifier model the registry knows.
 function resolvePrewalkHandoff(
   registry: ChildModelRegistry,
   spec: ManagedStartSpec,
@@ -128,17 +128,14 @@ function resolvePrewalkHandoff(
   const thinkingLevel = asSenpiThinkingLevel(suffix)
   const sameModel = model.provider === startModel.provider && model.id === startModel.id
   if (sameModel && (thinkingLevel === undefined || thinkingLevel === startThinkingLevel)) return undefined
-  const judgeModel = findModelReference(registry, spec.prewalk.judge.model)
+  const slash = spec.prewalk.judge.model.indexOf("/")
+  const judgeModel = slash <= 0
+    ? undefined
+    : registry.findOfType("classifier", spec.prewalk.judge.model.slice(0, slash), spec.prewalk.judge.model.slice(slash + 1))
   if (judgeModel === undefined) return undefined
-  const judgeThinkingLevel = asSenpiThinkingLevel(spec.prewalk.judge.variant)
   return {
     into: { model, ...(thinkingLevel !== undefined && { thinkingLevel }) },
-    judge: {
-      model: judgeModel,
-      ...(judgeThinkingLevel !== undefined && { thinkingLevel: judgeThinkingLevel }),
-      selectedModel: spec.prewalk.judge.model,
-      ...(spec.prewalk.judge.fallback_models !== undefined && { fallbackModels: spec.prewalk.judge.fallback_models }),
-    },
+    judge: { model: judgeModel, settlesMin: spec.prewalk.judge.settles_min, reopenMax: spec.prewalk.judge.reopen_max },
     request: spec.prewalk.request,
   }
 }

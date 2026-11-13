@@ -65,10 +65,14 @@ export const OmoTaskDagSettingsSchema = z.object({
   max_prompt_bytes: z.number().int().positive().default(262144),
 }).strict()
 
-// A handoff is judged for each assignment and never armed unjudged: a wrong handoff costs more
-// than a missed one. `judge_category` is the only ladder the judge may answer from.
+// A handoff is judged for each assignment by a classifier model and never armed unjudged: a wrong
+// handoff costs more than a missed one. It arms when the work before the first edit is real
+// (`settles_min`) and hard reasoning is unlikely to be needed after it (`reopen_max`).
 export const OmoTaskPrewalkSettingsSchema = z.object({
-  judge_category: z.string().min(1).default("quick"),
+  // `provider/id` of a classifier model; it never answers from a chat model.
+  judge_model: z.string().min(1).default("typesafe/jev-latest"),
+  settles_min: z.number().min(0).max(1).default(0.55),
+  reopen_max: z.number().min(0).max(1).default(0.5),
   // Category name -> `provider/model[:thinking]` an in-process child of that category continues
   // on, in the same session, after its first edit.
   targets: z.record(z.string(), z.string()).default({}),
@@ -145,7 +149,9 @@ export const OmoTaskWarningsLayerSchema = z.object({
 }).strict()
 
 export const OmoTaskPrewalkSettingsLayerSchema = z.object({
-  judge_category: z.string().min(1).optional(),
+  judge_model: z.string().min(1).optional(),
+  settles_min: z.number().min(0).max(1).optional(),
+  reopen_max: z.number().min(0).max(1).optional(),
   targets: z.record(z.string(), z.string()).optional(),
 }).strict()
 

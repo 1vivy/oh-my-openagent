@@ -1,8 +1,11 @@
+import type { CreateAgentSessionOptions } from "@code-yeongyu/senpi"
 import { log } from "@oh-my-opencode/utils"
 
 import type { SenpiThinkingLevel } from "../../senpi/thinking-level"
-import type { ResolvedModelRecord } from "../../state"
 import type { ChildSession, PrewalkModel } from "./child-handle"
+
+/** The parent session's model registry: the one place a classifier model is found and asked. */
+export type PrewalkRegistry = NonNullable<CreateAgentSessionOptions["modelRegistry"]>
 
 /**
  * A one-shot handoff for an in-process child: the session starts on the category's own model and,
@@ -18,9 +21,10 @@ export type PrewalkTarget = {
 /** What a judged spawn carries: where the child may continue, who decides, and what is decided on. */
 export type PrewalkHandoff = {
   readonly into: PrewalkTarget
-  readonly judge: PrewalkTarget & {
-    readonly selectedModel: string
-    readonly fallbackModels?: readonly ResolvedModelRecord[]
+  readonly judge: {
+    readonly model: Parameters<PrewalkRegistry["classify"]>[0]
+    readonly settlesMin: number
+    readonly reopenMax: number
   }
   /** The assignment as the caller wrote it, before the category's own text is joined on. */
   readonly request: string
