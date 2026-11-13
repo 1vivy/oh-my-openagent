@@ -191,13 +191,13 @@ export class InProcessRunner {
       })
     }
 
-    // The handoff is armed for this assignment only when the judge routes it there. The judge is
-    // a bare runner's child, as every judge is: no shared parent tool, kernel grant or dialog.
+    // The handoff is armed for this assignment only when the judge arms it. The judge is a bare
+    // runner's child, as every judge is: no shared parent tool, kernel grant or dialog.
     let into: PrewalkHandoff["into"] | undefined
     if (spec.prewalkHandoff !== undefined) {
       const judge = new InProcessRunner({ createSession: this.#createSession, depthPolicy: this.#depthPolicy })
-      const route = await judgePrewalk((judgeSpec) => judge.start(judgeSpec), spec, spec.prewalkHandoff)
-      if (route === "prewalk") into = spec.prewalkHandoff.into
+      const verdict = await judgePrewalk((judgeSpec) => judge.start(judgeSpec), spec, spec.prewalkHandoff)
+      if (verdict !== undefined) into = spec.prewalkHandoff.into
     }
 
     let session: ChildSession

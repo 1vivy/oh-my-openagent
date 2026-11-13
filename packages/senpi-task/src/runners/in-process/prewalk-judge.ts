@@ -1,12 +1,12 @@
 import { dirname, join, sep } from "node:path"
 
+import type { ToolDefinition } from "@code-yeongyu/senpi"
 import { log } from "@oh-my-opencode/utils"
+import { Type, type Static } from "typebox"
 
 import type { ChildSpec } from "../in-process"
 import type { ChildHandle } from "./child-handle"
 import type { PrewalkHandoff } from "./prewalk"
-
-export type PrewalkRoute = "prewalk" | "primary" | "direct"
 
 // The judge runs in front of the child's start, so its wait is paid by every judged spawn.
 const PREWALK_JUDGE_DEADLINE_MS = 15_000
@@ -15,32 +15,83 @@ const PREWALK_JUDGE_SAME_MODEL_RETRIES = 1
 // The assignment is the end of the prompt (loaded skills come first), so the tail is what is kept.
 const PREWALK_JUDGE_REQUEST_MAX_CHARS = 8_000
 
-export const PREWALK_JUDGE_PERSONA = `You route one assignment for a coding agent. You do not carry it out, and you call no tool.
+export const PREWALK_ARM_TOOL_NAME = "arm"
 
-A strong model can start the assignment and a cheaper model can continue the same session after the first edit. That handoff pays off only when both hold: the hard reasoning is finished before the first edit, and it stays finished, so nothing found while implementing or validating sends the work back to it.
+const PrewalkArmParams = Type.Object({
+  settles: Type.String({ description: "One sentence naming the specific thing the work before the first edit settles." }),
+  remaining: Type.String({ description: "One sentence naming the work after the first edit and why none of it needs the strong model." }),
+}, { additionalProperties: false })
 
-Decide where the strong model's reasoning has to be spent, not how hard or how large the assignment is:
+/** The judge's reasons for arming: what is settled before the first edit, and what is left after it. */
+export type PrewalkArmVerdict = Static<typeof PrewalkArmParams>
 
-- prewalk: starting correctly needs real investigation, diagnosis or design, and once that fixes the approach the implementation and verification left are bounded. Tracing an unfamiliar subsystem before a localized change; reading several interacting files before implementing a clear design; diagnosing a bug down to a concrete fix; a migration whose hard part is finding the transformation and everything it touches.
-- primary: strong reasoning stays needed while implementing, debugging or validating. Unresolved races or invariants; subtle state-machine or lifecycle changes; a bug whose cause is likely still unclear after a first look; a trade-off or a contract the assignment leaves open; a hard algorithm; work where the first edit is only the start of the thinking.
-- direct: there is no planning phase worth handing off from. A question or a read-only request; a trivial, mechanical or fully specified edit; a tiny localized fix.
+// The judge's only output channel. Silence is its default answer, so a handoff exists only as an
+// accepted call, and a call has to name both halves of the condition it claims.
+export const PREWALK_JUDGE_PERSONA = `You are a routing judge attached to one delegated coding assignment. You never carry the assignment out and you never address its author.
 
-A wrong handoff costs more than a missed one. When torn between prewalk and primary, answer primary. A small assignment is direct.
+A strong model starts the assignment. Your only output channel is the \`arm\` tool: calling it lets a cheaper model continue the same session after the strong model's first edit. Any text you write outside a tool call is discarded.
 
-Answer with exactly one word: prewalk, primary or direct.`
+## Decision
+
+Arm only when both hold:
+
+1. Before the first edit there is real work for a strong model: investigation, diagnosis, or finding a transformation and everything it touches. The assignment says or implies what that work settles.
+2. Once that is settled it stays settled. No design decision, trade-off, abstraction, interface, invariant, concurrency or lifecycle question is still open when the first edit lands, and nothing found while implementing or validating is expected to reopen one. What is left is applying a decided change and running the checks.
+
+Size, difficulty, the number of files and needing a plan are not reasons to arm. A question, a read-only request, or a trivial or fully specified edit fails the first condition. Work whose point is to design or realize an abstraction, choose seams, define a guarantee, or chase a cause that may still be unclear after a first look fails the second.
+
+If either condition is in doubt, end the turn without calling the tool. Silence is the correct default: a wrong handoff leaves a weaker model holding an open question and costs the task, while a missed one costs only the price difference.
+
+## arm tool
+
+\`arm(settles, remaining)\`
+
+- \`settles\`: one sentence naming the specific thing the work before the first edit settles.
+- \`remaining\`: one sentence naming the work after the first edit and why none of it needs the strong model.
+
+A call that cannot name both is rejected.
+
+## Examples
+
+Assignment: "Exports time out for accounts with more than 10k rows. Find which query the exporter runs and add the missing index."
+GOOD: arm("Which exporter query is slow and which index it lacks.", "One migration that adds the index, then the export test.")
+
+Assignment: "Split the \`Scheduler\` class into parts that can be tested; decide the boundaries from how the jobs use it."
+GOOD: silence. The boundaries are decided while editing, so the second condition fails.
+
+Assignment: "Change the button label from 'Send' to 'Submit'."
+GOOD: silence. There is nothing to settle before the first edit.`
 
 /**
- * Ask the judge whether this assignment's handoff is armed. Every miss is `undefined`, and the
- * caller arms on `prewalk` alone: a refused start, a failed or silent turn, an answer that is not
- * one of the three routes, or the deadline all leave the child on its own model.
+ * Ask the judge whether this assignment's handoff is armed. The answer is an accepted `arm` call
+ * or nothing: a silent turn, a refused start, a failed turn and the deadline all leave the child
+ * on its own model.
  */
 export async function judgePrewalk(
   start: (spec: ChildSpec) => Promise<ChildHandle>,
   spec: ChildSpec,
   handoff: PrewalkHandoff,
-): Promise<PrewalkRoute | undefined> {
+): Promise<PrewalkArmVerdict | undefined> {
   const judgeTaskId = `${spec.taskId}-prewalk-judge`
   const { model, thinkingLevel, selectedModel, fallbackModels } = handoff.judge
+  let verdict: PrewalkArmVerdict | undefined
+  const arm: ToolDefinition = {
+    name: PREWALK_ARM_TOOL_NAME,
+    label: "Prewalk",
+    description: "Let a cheaper model continue this assignment after the strong model's first edit. Call it only when the reasoning is settled by then and stays settled.",
+    parameters: PrewalkArmParams,
+    execute: async (_toolCallId, input: PrewalkArmVerdict) => {
+      if (input.settles.trim().length === 0 || input.remaining.trim().length === 0) {
+        return {
+          content: [{ type: "text", text: "Rejected: name both what is settled before the first edit and what remains after it, or end the turn." }],
+          details: undefined,
+          isError: true,
+        }
+      }
+      verdict = { settles: input.settles.trim(), remaining: input.remaining.trim() }
+      return { content: [{ type: "text", text: "Armed." }], details: undefined, terminate: true }
+    },
+  }
   const deadline = Promise.withResolvers<"deadline">()
   const timer = setTimeout(() => deadline.resolve("deadline"), PREWALK_JUDGE_DEADLINE_MS)
   timer.unref?.()
@@ -59,12 +110,16 @@ export async function judgePrewalk(
     selectedModel,
     ...(fallbackModels !== undefined && { fallbackModels }),
     retry: { maxRetries: PREWALK_JUDGE_SAME_MODEL_RETRIES },
-    toolAllowlist: [],
+    toolAllowlist: [PREWALK_ARM_TOOL_NAME],
+    memberScopedToolNames: [PREWALK_ARM_TOOL_NAME],
+    memberScopedTools: [arm],
     depth: spec.depth,
     parentSessionId: spec.parentSessionId,
     rootSessionId: spec.rootSessionId,
     systemPrompt: PREWALK_JUDGE_PERSONA,
     promptEnvelope: "bare",
+    // A turn that ends without text is a finished turn: the judge's silence is an answer.
+    completion: "turn",
     prompt: `<assignment>\n${handoff.request.slice(-PREWALK_JUDGE_REQUEST_MAX_CHARS)}\n</assignment>`,
   })
   let expired = false
@@ -74,9 +129,10 @@ export async function judgePrewalk(
       expired = true
       return undefined
     }
-    const route = settled.status === "completed" ? parsePrewalkRoute(settled.finalResponse) : undefined
-    log("[senpi-task] prewalk judge answered", { taskId: spec.taskId, route: route ?? "none" })
-    return route
+    // A call accepted before the turn failed is not trusted: only a turn that settled normally arms.
+    const armed = settled.status === "completed" ? verdict : undefined
+    log("[senpi-task] prewalk judge settled", { taskId: spec.taskId, armed: armed !== undefined, ...armed })
+    return armed
   } catch (error) {
     log("[senpi-task] prewalk judge failed; the child stays on its model", { taskId: spec.taskId, error: String(error) })
     return undefined
@@ -89,9 +145,4 @@ export async function judgePrewalk(
     }).catch(() => undefined)
     if (!expired) await released
   }
-}
-
-export function parsePrewalkRoute(answer: string): PrewalkRoute | undefined {
-  const word = /^[\s"'`*]*(prewalk|primary|direct)\b/i.exec(answer)?.[1]?.toLowerCase()
-  return word === "prewalk" || word === "primary" || word === "direct" ? word : undefined
 }
