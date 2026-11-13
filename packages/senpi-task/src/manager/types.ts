@@ -46,8 +46,8 @@ export type ManagedStartSpec = {
   // matches on this pair - never on the human display string, which need not be a registry id.
   readonly resolvedModel?: ResolvedModelRecord
   readonly variant?: string
-  // `provider/model[:thinking]` the child continues on after its first edit (in-process only).
-  readonly prewalk?: string
+  // The judged handoff the planner resolved, with the assignment the judge reads (in-process only).
+  readonly prewalk?: PrewalkPlan & { readonly request: string }
   readonly agentType?: string
   readonly instructions?: string
   readonly toolAllowlist?: readonly string[]
@@ -119,13 +119,24 @@ export type ManagerStartSpec = {
   readonly memberEnv?: Readonly<Record<string, string>>
 }
 
+// A handoff the planner resolved for a category child: the `provider/model[:thinking]` it may
+// continue on after its first edit, and the judge-category model that decides it per assignment.
+export type PrewalkPlan = {
+  readonly into: string
+  readonly judge: {
+    readonly model: string
+    readonly variant?: string
+    readonly fallback_models?: readonly ResolvedModelRecord[]
+  }
+}
+
 export type ResolvedChildPlan = {
   readonly model: string
   readonly requested_model?: ResolvedModelRecord
   readonly fallback_models?: readonly ResolvedModelRecord[]
   readonly resolved_model?: ResolvedModelRecord
   readonly variant?: string
-  readonly prewalk?: string
+  readonly prewalk?: PrewalkPlan
   readonly agentExecutionMode?: ExecutionMode
   readonly agentType?: string
   readonly category?: string

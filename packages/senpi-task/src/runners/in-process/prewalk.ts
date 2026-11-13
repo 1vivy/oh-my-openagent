@@ -1,6 +1,7 @@
 import { log } from "@oh-my-opencode/utils"
 
 import type { SenpiThinkingLevel } from "../../senpi/thinking-level"
+import type { ResolvedModelRecord } from "../../state"
 import type { ChildSession, PrewalkModel } from "./child-handle"
 
 /**
@@ -12,6 +13,17 @@ import type { ChildSession, PrewalkModel } from "./child-handle"
 export type PrewalkTarget = {
   readonly model: PrewalkModel
   readonly thinkingLevel?: SenpiThinkingLevel
+}
+
+/** What a judged spawn carries: where the child may continue, who decides, and what is decided on. */
+export type PrewalkHandoff = {
+  readonly into: PrewalkTarget
+  readonly judge: PrewalkTarget & {
+    readonly selectedModel: string
+    readonly fallbackModels?: readonly ResolvedModelRecord[]
+  }
+  /** The assignment as the caller wrote it, before the category's own text is joined on. */
+  readonly request: string
 }
 
 const TODO_TOOL_NAME = "todo"

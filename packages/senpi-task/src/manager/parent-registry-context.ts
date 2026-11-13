@@ -81,7 +81,7 @@ export function createParentRegistrySessionContext(
       }
       const modelRuntime = registry.modelRuntime
       const thinkingLevel = asSenpiThinkingLevel(spec.variant) ?? asSenpiThinkingLevel(splitModelDecorators(spec.model).thinkingLevel)
-      const prewalkTarget = resolvePrewalkTarget(registry, spec, model, thinkingLevel, resolveExcludeModels())
+      const prewalkHandoff = resolvePrewalkHandoff(registry, spec, model, thinkingLevel, resolveExcludeModels())
       return {
         ...trust(),
         modelRegistry: registry,
@@ -89,7 +89,7 @@ export function createParentRegistrySessionContext(
         ...(modelRuntime !== undefined && { modelRuntime }),
         model,
         ...(thinkingLevel !== undefined && { thinkingLevel }),
-        ...(prewalkTarget !== undefined && { prewalkTarget }),
+        ...(prewalkHandoff !== undefined && { prewalkHandoff }),
       }
     }
     const modelRuntime = registry.modelRuntime
@@ -110,24 +110,37 @@ export function createParentRegistrySessionContext(
   })
 }
 
-// A handoff target is an optimization, so every miss leaves the child on its own model: an
-// excluded or unknown target, or one that names the model and level the child already starts on.
-function resolvePrewalkTarget(
+// A handoff is an optimization, so every miss leaves the child on its own model: an excluded or
+// unknown target, a target that names the model and level the child already starts on, or a judge
+// model the registry no longer serves.
+function resolvePrewalkHandoff(
   registry: ChildModelRegistry,
   spec: ManagedStartSpec,
   startModel: NonNullable<InProcessSessionContext["model"]>,
   startThinkingLevel: InProcessSessionContext["thinkingLevel"],
   excludeModels: readonly string[] | undefined,
-): InProcessSessionContext["prewalkTarget"] {
+): InProcessSessionContext["prewalkHandoff"] {
   if (spec.prewalk === undefined) return undefined
-  const { base, thinkingLevel: suffix } = splitModelDecorators(spec.prewalk.trim())
+  const { base, thinkingLevel: suffix } = splitModelDecorators(spec.prewalk.into.trim())
   if (excludedModelPattern(base, excludeModels) !== undefined) return undefined
   const model = findModelReference(registry, base)
   if (model === undefined) return undefined
   const thinkingLevel = asSenpiThinkingLevel(suffix)
   const sameModel = model.provider === startModel.provider && model.id === startModel.id
   if (sameModel && (thinkingLevel === undefined || thinkingLevel === startThinkingLevel)) return undefined
-  return { model, ...(thinkingLevel !== undefined && { thinkingLevel }) }
+  const judgeModel = findModelReference(registry, spec.prewalk.judge.model)
+  if (judgeModel === undefined) return undefined
+  const judgeThinkingLevel = asSenpiThinkingLevel(spec.prewalk.judge.variant)
+  return {
+    into: { model, ...(thinkingLevel !== undefined && { thinkingLevel }) },
+    judge: {
+      model: judgeModel,
+      ...(judgeThinkingLevel !== undefined && { thinkingLevel: judgeThinkingLevel }),
+      selectedModel: spec.prewalk.judge.model,
+      ...(spec.prewalk.judge.fallback_models !== undefined && { fallbackModels: spec.prewalk.judge.fallback_models }),
+    },
+    request: spec.prewalk.request,
+  }
 }
 
 /**

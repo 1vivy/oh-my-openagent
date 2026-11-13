@@ -65,6 +65,15 @@ export const OmoTaskDagSettingsSchema = z.object({
   max_prompt_bytes: z.number().int().positive().default(262144),
 }).strict()
 
+// A handoff is judged for each assignment and never armed unjudged: a wrong handoff costs more
+// than a missed one. `judge_category` is the only ladder the judge may answer from.
+export const OmoTaskPrewalkSettingsSchema = z.object({
+  judge_category: z.string().min(1).default("quick"),
+  // Category name -> `provider/model[:thinking]` an in-process child of that category continues
+  // on, in the same session, after its first edit.
+  targets: z.record(z.string(), z.string()).default({}),
+}).strict()
+
 export const OmoTaskSettingsSchema = z.object({
   isolation: OmoTaskIsolationSchema.default(isolationDefaults),
   // "auto" defers the choice to the shared task daemon: `process` when this platform can host
@@ -105,9 +114,7 @@ export const OmoTaskSettingsSchema = z.object({
     max_wall_clock_minutes: 120,
   }),
   dag: OmoTaskDagSettingsSchema.optional(),
-  // Category name -> `provider/model[:thinking]`. An in-process child of that category starts on the
-  // category's own model and continues on this one, in the same session, after its first edit.
-  prewalk: z.record(z.string(), z.string()).optional(),
+  prewalk: OmoTaskPrewalkSettingsSchema.optional(),
 }).strict()
 
 export const OmoTaskDagSettingsLayerSchema = z.object({
@@ -137,6 +144,11 @@ export const OmoTaskWarningsLayerSchema = z.object({
   unavailable_categories: z.boolean().optional(),
 }).strict()
 
+export const OmoTaskPrewalkSettingsLayerSchema = z.object({
+  judge_category: z.string().min(1).optional(),
+  targets: z.record(z.string(), z.string()).optional(),
+}).strict()
+
 export const OmoTaskSettingsLayerSchema = z.object({
   isolation: OmoTaskIsolationLayerSchema.optional(),
   default_execution_mode: z.enum(["auto", "in-process", "process"]).optional(),
@@ -159,7 +171,7 @@ export const OmoTaskSettingsLayerSchema = z.object({
   wait: OmoTaskWaitLayerSchema.optional(),
   team: OmoTaskTeamSettingsLayerSchema.optional(),
   dag: OmoTaskDagSettingsLayerSchema.optional(),
-  prewalk: z.record(z.string(), z.string()).optional(),
+  prewalk: OmoTaskPrewalkSettingsLayerSchema.optional(),
 }).strict()
 
 export type OmoTaskDagSettings = z.infer<typeof OmoTaskDagSettingsSchema>

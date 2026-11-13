@@ -17,7 +17,8 @@ import {
 import { buildChildSessionOptions, requireChildSessionDir, resolveMemberScopedToolNames } from "./in-process/child-options"
 import { defaultCreateChildSession, type ChildDialogBinding, type CreateChildSession } from "./in-process/create-child-session"
 import { assertPinnedModelHonoured } from "./in-process/pin-check"
-import { armPrewalk, PREWALK_PLAN_NUDGE, type PrewalkTarget } from "./in-process/prewalk"
+import { armPrewalk, PREWALK_PLAN_NUDGE, type PrewalkHandoff } from "./in-process/prewalk"
+import { judgePrewalk } from "./in-process/prewalk-judge"
 import { assertUsableSessionFile } from "./in-process/session-file-guard"
 import { RunnerError } from "./in-process/runner-error"
 import type { ChildRetryOverride } from "./in-process/runtime-fallback-settings"
@@ -74,8 +75,8 @@ export type ChildSpec = {
   readonly modelRuntime?: CreateAgentSessionOptions["modelRuntime"]
   readonly model?: CreateAgentSessionOptions["model"]
   readonly thinkingLevel?: CreateAgentSessionOptions["thinkingLevel"]
-  // Armed at start only: a resumed child stays on the model its transcript restored.
-  readonly prewalkTarget?: PrewalkTarget
+  // Judged and armed at start only: a resumed child stays on the model its transcript restored.
+  readonly prewalkHandoff?: PrewalkHandoff
   readonly selectedModel?: string
   readonly requestedModel?: ResolvedModelRecord
   readonly fallbackModels?: readonly ResolvedModelRecord[]
@@ -190,6 +191,15 @@ export class InProcessRunner {
       })
     }
 
+    // The handoff is armed for this assignment only when the judge routes it there. The judge is
+    // a bare runner's child, as every judge is: no shared parent tool, kernel grant or dialog.
+    let into: PrewalkHandoff["into"] | undefined
+    if (spec.prewalkHandoff !== undefined) {
+      const judge = new InProcessRunner({ createSession: this.#createSession, depthPolicy: this.#depthPolicy })
+      const route = await judgePrewalk((judgeSpec) => judge.start(judgeSpec), spec, spec.prewalkHandoff)
+      if (route === "prewalk") into = spec.prewalkHandoff.into
+    }
+
     let session: ChildSession
     let createdSession: ChildSession | undefined
     try {
@@ -241,7 +251,7 @@ export class InProcessRunner {
         parentSessionId: spec.parentSessionId,
         rootSessionId: spec.rootSessionId,
         depth: spec.depth,
-        prompt: spec.prewalkTarget === undefined ? spec.prompt : `${spec.prompt}\n\n${PREWALK_PLAN_NUDGE}`,
+        prompt: into === undefined ? spec.prompt : `${spec.prompt}\n\n${PREWALK_PLAN_NUDGE}`,
         ...(spec.agentType !== undefined && { agentType: spec.agentType }),
         ...(spec.instructions !== undefined && { instructions: spec.instructions }),
       })
@@ -265,7 +275,7 @@ export class InProcessRunner {
     // id for same-host revival. Nothing about it reaches the record, the v1 spawn_spec or the
     // child's JSONL transcript.
     if (spec.kernelTools !== undefined) this.#kernelToolBindings?.bind(spec.taskId, spec.kernelTools)
-    if (spec.prewalkTarget !== undefined) armPrewalk(session, spec.prewalkTarget, spec.taskId)
+    if (into !== undefined) armPrewalk(session, into, spec.taskId)
     return { handle: staged.handle, promptText, begin: staged.begin }
   }
 

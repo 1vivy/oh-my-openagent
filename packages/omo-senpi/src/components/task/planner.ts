@@ -83,7 +83,8 @@ export function createTaskChildPlanner(
     }
 
     const resolution = resolveCategory(categoryName, omoConfig, registry, { distributeModels })
-    const plan = toPlanResolution(categoryName, resolution, availableAgents, omoConfig.task?.prewalk)
+    const prewalk = resolution.kind === "resolved" ? planPrewalk(resolution.category, omoConfig, registry) : undefined
+    const plan = toPlanResolution(categoryName, resolution, availableAgents, prewalk)
     // Q's standing model rule: a chain ends in a typed failure that names each model, so the parent
     // reads the whole chain and the fix instead of retrying a dead binding. No substitution happens.
     if (plan.kind === "error" && plan.error.code === "model_unavailable") {
@@ -209,18 +210,34 @@ function listAvailableAgents(agents: Readonly<Record<string, AgentDefinition>>):
     .sort()
 }
 
+// A judged handoff for a category child. The judge answers from its own category's chain and
+// nowhere else, so a judge category with no connected model leaves the child on its own model.
+function planPrewalk(category: string, omoConfig: OmoConfig, registry: TaskModelRegistry): ResolvedPlan["prewalk"] {
+  const settings = omoConfig.task?.prewalk
+  // Keyed by the resolved category, so a retired alias and its replacement share one entry.
+  const into = settings !== undefined && Object.hasOwn(settings.targets, category) ? settings.targets[category] : undefined
+  if (settings === undefined || into === undefined) return undefined
+  const judge = resolveCategory(settings.judge_category, omoConfig, registry)
+  if (judge.kind !== "resolved") return undefined
+  const variant = judge.spec.reasoning ?? judge.spec.reasoningEffort ?? judge.spec.variant
+  return {
+    into,
+    judge: {
+      model: `${judge.spec.provider}/${judge.spec.modelId}`,
+      ...(variant !== undefined && { variant }),
+      ...(judge.spec.fallback_models !== undefined && { fallback_models: judge.spec.fallback_models }),
+    },
+  }
+}
+
 function toPlanResolution(
   categoryName: string,
   resolution: ReturnType<typeof resolveCategory<SenpiModelPort>>,
   availableAgents: readonly string[],
-  prewalkByCategory: Readonly<Record<string, string>> | undefined,
+  prewalk: ResolvedPlan["prewalk"],
 ): PlanResolution {
   if (resolution.kind === "resolved") {
     const appliedVariant = resolution.spec.reasoning ?? resolution.spec.reasoningEffort ?? resolution.spec.variant
-    // Keyed by the resolved category, so a retired alias and its replacement share one entry.
-    const prewalk = prewalkByCategory !== undefined && Object.hasOwn(prewalkByCategory, resolution.category)
-      ? prewalkByCategory[resolution.category]
-      : undefined
     return {
       kind: "resolved",
       plan: {

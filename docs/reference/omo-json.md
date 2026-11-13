@@ -594,20 +594,33 @@ OpenGateway has a built-in unlimited provider concurrency default, so it does no
 | `team.max_parallel_members` | int 1..8 | `4` |
 | `team.max_wall_clock_minutes` | positive int | `120` |
 | `dag` | object | unset |
-| `prewalk` | record<string, string> | unset |
+| `prewalk.judge_category` | string | `quick` |
+| `prewalk.targets` | record<string, string> | `{}` |
 
 `task.dag` is an optional block bounding the DAG orchestration subsystem (`schema/task.ts`): `max_nodes_per_run` (`64`), `max_runs_per_session` (`16`, counting only runs that are still active: finished, failed and cancelled runs free their slot), `subscriber_ring` (`1000`), `heartbeat_ms` (`15000`), `history_default_limit` (`256`), `history_max_limit` (`1000`), `retention_days` (`7`), `max_prompt_bytes` (`262144`).
 
-`task.prewalk` maps a category name to a `provider/model[:thinking]` handoff target. A child of that category starts on the category's own model with a plan-first instruction joined onto its task. At its first `edit`, `write` or `apply_patch` after a successful `todo` call, the same session continues on the target: the second model inherits everything the first one read, the plan as a todo list and one edit in place. A child without a `todo` tool hands off at its first edit. The handoff is one-shot and fails open: a target that is unknown, kept out by `exclude_models` or equal to the starting model and level leaves the child on its own model, as does a refused switch. It applies to in-process children spawned by category only: a call with an explicit `model`, a `subagent_type` call, a resumed child and a `process` child (a daemon session, a team member) are never handed off, so set `default_execution_mode: "in-process"` to use it. After the switch the child has no model fallback chain.
+`task.prewalk` lets a category child start on the category's own model and continue, in the same session, on a cheaper one. `targets` maps a category name to the `provider/model[:thinking]` it may continue on. The handoff pays off only when the hard reasoning is finished before the first edit and stays finished while implementing, so it is never armed unjudged: before each such child starts, a judge reads the assignment and routes it.
 
-A category fits when its hard reasoning ends before the first edit and the work left is bounded and has many edits: `deep-low`, `unspecified-low`, `unspecified-high`. It does not fit `deep-high`, `ultrabrain` or `architect`, whose reasoning continues while editing, or `quick` and `writing`, which have no planning phase to hand off from.
+| Route | Meaning | Result |
+|-------|---------|--------|
+| `prewalk` | The approach has to be found first, and the work left after it is bounded | armed |
+| `primary` | Strong reasoning stays needed while implementing, debugging or validating | the child runs on its own model |
+| `direct` | No planning phase worth handing off from | the child runs on its own model |
+
+The judge is a tool-less in-process child on the `judge_category` model (default `quick`). It reads the assignment as the caller wrote it, without the category's appended text, and answers one word. It answers from that category's chain only and has 15 seconds. A wrong handoff costs more than a missed one, so everything else leaves the child on its own model: a judge category with no connected model, a failed or late judge, an answer that is not one of the three routes, and a target that is unknown, kept out by `exclude_models` or equal to the starting model and level. The judge's transcript is kept beside the child's, under `children/<task id>/sessions/<task id>-prewalk-judge/`.
+
+An armed child gets a plan-first instruction joined onto its task. At its first `edit`, `write` or `apply_patch` after a successful `todo` call, the session continues on the target: the second model inherits everything the first one read, the plan as a todo list and one edit in place. A child without a `todo` tool hands off at its first edit. The handoff is one-shot, and a refused switch leaves the child where it is. After the switch the child has no model fallback chain.
+
+It applies to in-process children spawned by category. A call with an explicit `model`, a `subagent_type` call, a resumed child and a `process` child (a daemon session, a team member) are neither judged nor handed off, so set `default_execution_mode: "in-process"` to use it.
 
 ```jsonc
 {
   "categories": { "unspecified-low": { "model": "anthropic/claude-opus-5-5" } },
   "task": {
     "default_execution_mode": "in-process",
-    "prewalk": { "unspecified-low": "deepseek/deepseek-v4-pro:high" }
+    "prewalk": {
+      "targets": { "unspecified-low": "deepseek/deepseek-v4-pro:high" }
+    }
   }
 }
 ```

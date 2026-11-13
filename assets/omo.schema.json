@@ -1250,12 +1250,24 @@
         },
         "prewalk": {
           "type": "object",
-          "propertyNames": {
-            "type": "string"
+          "properties": {
+            "judge_category": {
+              "default": "quick",
+              "type": "string",
+              "minLength": 1
+            },
+            "targets": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
           },
-          "additionalProperties": {
-            "type": "string"
-          }
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -3908,12 +3920,22 @@
             },
             "prewalk": {
               "type": "object",
-              "propertyNames": {
-                "type": "string"
+              "properties": {
+                "judge_category": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
               },
-              "additionalProperties": {
-                "type": "string"
-              }
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
@@ -6390,12 +6412,22 @@
             },
             "prewalk": {
               "type": "object",
-              "propertyNames": {
-                "type": "string"
+              "properties": {
+                "judge_category": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
               },
-              "additionalProperties": {
-                "type": "string"
-              }
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
@@ -8872,12 +8904,22 @@
             },
             "prewalk": {
               "type": "object",
-              "propertyNames": {
-                "type": "string"
+              "properties": {
+                "judge_category": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "targets": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
               },
-              "additionalProperties": {
-                "type": "string"
-              }
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
@@ -11360,12 +11402,22 @@
               },
               "prewalk": {
                 "type": "object",
-                "propertyNames": {
-                  "type": "string"
+                "properties": {
+                  "judge_category": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "targets": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
                 },
-                "additionalProperties": {
-                  "type": "string"
-                }
+                "additionalProperties": false
               }
             },
             "additionalProperties": false
@@ -13842,12 +13894,22 @@
                   },
                   "prewalk": {
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string"
+                    "properties": {
+                      "judge_category": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "targets": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
                     },
-                    "additionalProperties": {
-                      "type": "string"
-                    }
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -16324,12 +16386,22 @@
                   },
                   "prewalk": {
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string"
+                    "properties": {
+                      "judge_category": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "targets": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
                     },
-                    "additionalProperties": {
-                      "type": "string"
-                    }
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -18806,12 +18878,22 @@
                   },
                   "prewalk": {
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string"
+                    "properties": {
+                      "judge_category": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "targets": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
                     },
-                    "additionalProperties": {
-                      "type": "string"
-                    }
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
